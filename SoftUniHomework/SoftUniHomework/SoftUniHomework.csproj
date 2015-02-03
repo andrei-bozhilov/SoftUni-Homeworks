@@ -44,9 +44,14 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Attributes\TaskDescriptionAttribute.cs" />
+    <Compile Include="Core\MethodModel.cs" />
+    <Compile Include="Core\ClassModel.cs" />
     <Compile Include="Core\ReflectionReader.cs" />
+    <Compile Include="Curses\AdvanceTopics.cs" />
     <Compile Include="Curses\Class1.cs" />
     <Compile Include="Curses\Class2.cs" />
+    <Compile Include="Extensions\RichTextBoxExtensions.cs" />
     <Compile Include="Forms\MainForm.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -81,7 +86,7 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="Attributes\" />
+    <Folder Include="Contracts\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

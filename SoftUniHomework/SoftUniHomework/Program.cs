@@ -1,12 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using System.Windows.Forms;
-using SoftUniHomework.Forms;
-
-namespace SoftUniHomework
+﻿namespace SoftUniHomework
 {
+    using System;
+    using System.Windows.Forms;
+    using SoftUniHomework.Forms;
+
     static class Program
     {
         /// <summary>

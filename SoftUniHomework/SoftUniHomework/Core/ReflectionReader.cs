@@ -1,65 +1,152 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace SoftUniHomework.Core
+﻿namespace SoftUniHomework.Core
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Linq;
+    using System.Reflection;
+    using SoftUniHomework.Attributes;
+
     public class ReflectionReader
     {
-        private List<Type> assemblyClasses;
-        private List<MethodInfo> classMethods;
-
-        public ReflectionReader()
+        /// <summary>
+        /// Filter for specific namespace, and exclude system methods such as toString()
+        /// </summary>
+        /// <param name="namespaceFilterBy">Name of namespace you want</param>
+        /// <param name="methodNameExcluded">Name of methods you don't want</param>
+        public ReflectionReader(IEnumerable<string> namespaceFilterBy = null, IEnumerable<string> methodNameExcluded = null)
         {
-            this.assemblyClasses = new List<Type>();
-            this.classMethods = new List<MethodInfo>();
-            this.BannedClasses = new List<string>();
-            this.BannedMethods = new List<string>();
-            this.GetAllClasses();
+            this.AssemblyClassesMethods = new Dictionary<Type, MethodInfo[]>();
+            this.AssemblyClassesMethodsNames = new Dictionary<ClassModel, MethodModel[]>();
+            this.GetAllClassesMethods(namespaceFilterBy, methodNameExcluded);
         }
 
-        public ReflectionReader(ICollection<string> bannedClassesNames, ICollection<string> bannedMethodsNames)
-            : this()
-        {
-            this.BannedClasses = bannedClassesNames.ToList();
-            this.BannedMethods = bannedMethodsNames.ToList();
-        }
+        public Dictionary<Type, MethodInfo[]> AssemblyClassesMethods { get; private set; }
 
-        public List<string> BannedClasses { get; set; }
+        public Dictionary<ClassModel, MethodModel[]> AssemblyClassesMethodsNames { get; private set; }
 
-        public List<string> BannedMethods { get; set; }
-
-        private void GetAllClasses()
+        private void GetAllClassesMethods(IEnumerable<string> namespaceFilterBy = null,
+            IEnumerable<string> methodNameExcluded = null)
         {
             Assembly currentAssembly = Assembly.GetExecutingAssembly();
-            this.assemblyClasses = currentAssembly.GetTypes().ToList();
+            var classTypes = currentAssembly.GetTypes();
+
+            foreach (var classType in classTypes)
+            {
+                if (namespaceFilterBy == null || namespaceFilterBy.Any(x => x == classType.Namespace))
+                {
+                    this.AssemblyClassesMethods
+                        .Add(classType, classType.GetMethods().ToArray());
+                }
+                else
+                {
+                    continue;
+                }
+
+                string[] classTypeMethodsNames;
+
+                if (methodNameExcluded != null)
+                {
+                    classTypeMethodsNames =
+                    classType.GetMethods().Select(x => x.Name).Except(methodNameExcluded).ToArray();
+                }
+                else
+                {
+                    classTypeMethodsNames =
+                   classType.GetMethods().Select(x => x.Name).ToArray();
+                }
+
+                var classAttribute = this.GetAttributeInfoForClass(classType);
+                MethodModel[] methodModels = new MethodModel[classTypeMethodsNames.Length];
+
+                for (int i = 0; i < classTypeMethodsNames.Length; i++)
+                {
+                    var methodAttribute =
+                        this.GetAttributeInfoForMethod(classType.Name, classTypeMethodsNames[i]);
+
+                    methodModels[i] =
+                        new MethodModel(
+                            classTypeMethodsNames[i],
+                            methodAttribute.PositionNumber,
+                            methodAttribute.TaskDescription,
+                            methodAttribute.SourceCode);
+                }
+
+                Array.Sort(methodModels);
+
+                this.AssemblyClassesMethodsNames
+                        .Add(new ClassModel(classType.Name, classAttribute.PositionNumber), methodModels);
+            }
         }
 
-        private void GetAllMethods(string className)
+        private MethodInfo FindMethod(string className, string methodName)
         {
-            Type currentClass = Type.GetType(className);
-            this.classMethods = currentClass.GetMethods().ToList();
+            if (string.IsNullOrWhiteSpace(className) || string.IsNullOrWhiteSpace(methodName))
+            {
+                throw new ArgumentException("Class name or method name can't be null, empty or white space.");
+            }
+
+            var currentClass =
+                this.AssemblyClassesMethods.Keys.First(x => x.Name == className);
+            var currentMethod =
+                this.AssemblyClassesMethods[currentClass].FirstOrDefault(x => x.Name == methodName);
+
+            if (currentMethod == null)
+            {
+                throw new MissingMemberException("There is no such method.");
+            }
+            return currentMethod;
         }
 
-        public IEnumerable<string> GetAllClassesNames()
+        public string ExcuteMethod(string className, string methodName, string[] methodParameters = null)
         {
-            return this.assemblyClasses.Select(x => x.FullName);
+            var currentMethod = this.FindMethod(className, methodName);
+            return (string)currentMethod.Invoke(this, methodParameters);
         }
 
-        public IEnumerable<string> GetAllMethodsNames(string className)
+        private TaskDescriptionAttribute GetAttributeInfoForClass(string className)
         {
-            this.GetAllMethods(className);
-            return this.classMethods.Select(x => x.Name);
+            var currentClass =
+                this.AssemblyClassesMethods.Keys
+                .Where(x => x.Name == className)
+                .FirstOrDefault();
+
+            if (currentClass.GetCustomAttribute<TaskDescriptionAttribute>() == null)
+            {
+                throw new ArgumentException("There is no attribute of type TaskDescriptionAttribute for this class.");
+            }
+
+            return currentClass.GetCustomAttribute<TaskDescriptionAttribute>();
         }
 
-        public string ExcuteMethod(string className, string methodName)
+        private TaskDescriptionAttribute GetAttributeInfoForClass(Type currentClass)
         {
-            var currentClass = Type.GetType(className);
-            var currentMethod = currentClass.GetMethod(methodName);
-            return (string)currentMethod.Invoke(this, null);
+            if (currentClass.GetCustomAttribute<TaskDescriptionAttribute>() == null)
+            {
+                throw new ArgumentException("There is no attribute of type TaskDescriptionAttribute for this class.");
+            }
+
+            return currentClass.GetCustomAttribute<TaskDescriptionAttribute>();
+        }
+
+        public TaskDescriptionAttribute GetAttributeInfoForMethod(string className, string methodName)
+        {
+            var currentMethod = this.FindMethod(className, methodName);
+            if (currentMethod.GetCustomAttribute<TaskDescriptionAttribute>() == null)
+            {
+                throw new ArgumentException("There is no attribute of type TaskDescriptionAttribute for this method.");
+            }
+
+            return currentMethod.GetCustomAttribute<TaskDescriptionAttribute>();
+        }
+
+        public TaskDescriptionAttribute GetAttributeInfoForMethod(MethodInfo methodName)
+        {
+            if (methodName.GetCustomAttribute<TaskDescriptionAttribute>() == null)
+            {
+                throw new ArgumentException("There is no attribute of type TaskDescriptionAttribute for this method.");
+            }
+
+            return methodName.GetCustomAttribute<TaskDescriptionAttribute>();
         }
     }
 }
