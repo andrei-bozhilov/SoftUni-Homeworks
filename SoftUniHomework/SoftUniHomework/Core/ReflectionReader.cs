@@ -100,7 +100,7 @@
         public string ExcuteMethod(string className, string methodName, string[] methodParameters = null)
         {
             var currentMethod = this.FindMethod(className, methodName);
-            return (string)currentMethod.Invoke(this, methodParameters);
+            return (currentMethod.Invoke(this, methodParameters)).ToString();
         }
 
         private TaskDescriptionAttribute GetAttributeInfoForClass(string className)

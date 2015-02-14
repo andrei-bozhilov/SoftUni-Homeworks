@@ -13,7 +13,10 @@ namespace SoftUniHomework.Extensions
         private static readonly string[] SpecialWords = 
         { "new", "class", "public", "return", "private", "static", "void", 
             "if", "break", "switch", "for", "int", "string", "long", "small",
-            "bool", "byte", "uint", "ulong", "decimal", "float", "double", "var", "throw" };
+            "bool", "byte", "uint", "ulong", "decimal", "float", "double", "var", "throw" , "else"
+        };
+
+        private static readonly string[] Bools = { "true", "false", "true;", "false;" };
 
         public static void AppendTextFormat(this RichTextBox box, string text)
         {
@@ -43,6 +46,18 @@ namespace SoftUniHomework.Extensions
                         box.AppendText(words[i]);
                         box.AppendText(" ");
                         box.SelectionColor = box.ForeColor;
+                    }
+                    else if (Bools.Contains(words[i]))
+                    {
+                        box.SelectionStart = box.TextLength;
+                        box.SelectionColor = Color.Red;
+                        box.SelectionFont = new Font(box.Font.FontFamily, box.Font.Size, FontStyle.Italic);
+
+                        box.AppendText(words[i]);
+                        box.AppendText(" ");
+                        box.SelectionFont = new Font(box.Font.FontFamily, box.Font.Size, FontStyle.Regular);
+                        box.SelectionColor = box.ForeColor;
+
                     }
                     else
                     {

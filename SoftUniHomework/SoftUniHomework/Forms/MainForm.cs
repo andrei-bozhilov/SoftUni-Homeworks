@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Windows.Forms;
-
 using SoftUniHomework.Attributes;
 using SoftUniHomework.Core;
 using SoftUniHomework.Extensions;
@@ -18,6 +18,12 @@ namespace SoftUniHomework.Forms
         public MainForm()
         {
             InitializeComponent();
+            this.descriptionTextBox.ScrollBars = ScrollBars.Vertical;
+
+            foreach (Control control in this.Controls)
+            {
+                control.MouseEnter += control_MouseEnter;
+            }
 
             nameSpaceFilter = new string[] { "SoftUniHomework.Curses" };
             methodNameExcluded = new string[] { "ToString", "GetHashCode", "Equals", "GetType" };
@@ -30,6 +36,26 @@ namespace SoftUniHomework.Forms
                 .Select(x => x.Name)
                 .ToArray());
         }
+
+        private void control_MouseEnter(object sender, EventArgs e)
+        {
+            Control control = (Control)sender;
+
+            if (control.CanFocus)
+            {
+                if (!control.Focused)
+                {
+                    control.Focus();
+                    var textbox = control as TextBoxBase;
+
+                    if (textbox != null)
+                    {
+                        textbox.DeselectAll();
+                    }
+                }
+            }
+        }
+
 
         private void classComboBox_SelectedValueChanged(object sender, EventArgs e)
         {
@@ -54,7 +80,7 @@ namespace SoftUniHomework.Forms
                 try
                 {
                     var parameters =
-                        this.inputRichTextBox.Text.Split(new string[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
+                        this.inputRichTextBox.Text.Split(new string[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries);
                     this.outputRichTextBox.Text = reader.ExcuteMethod(className, methodName, parameters);
                 }
                 catch (Exception ex)
